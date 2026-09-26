@@ -1,12 +1,15 @@
 /**
- * Access gate — same model as the بوصلة الخليج site's gate (gcc-cis repo), adapted
- * for this separate product with its own codes, own customers, own cookie.
+ * Access gate — same model as the بوصلة الخليج site's gate (gcc-cis repo):
+ * ONE permanent URL per customer relationship, ONE activation code, checked
+ * before any page or API route runs.
  *
- * ONE permanent URL per customer relationship, ONE activation code, checked at
- * Cloudflare's edge before any page or API route runs. See gcc-cis's
- * functions/_middleware.js for the original design notes — this is the same
- * approach, not a copy-paste of the same file, because this product's pages and
- * API routes are different.
+ * Originally written as a Cloudflare Pages "_middleware.js" (which runs
+ * automatically for every request under that product). This project deploys
+ * as a plain Worker with static assets instead (see wrangler.toml and
+ * src/worker.js — Pages' automatic functions/ routing doesn't apply here), so
+ * this is now a plain function the Worker's router calls itself, once, at the
+ * top of every request. The activation logic and cookie handling are
+ * otherwise unchanged.
  *
  * Codes live in the ACCESS_CODES environment variable (Cloudflare dashboard),
  * comma-separated, never in git. Editing takes effect within seconds.
@@ -15,19 +18,23 @@
 const COOKIE = "cvt_access";
 const MAX_AGE = 60 * 60 * 24 * 730; // two years
 
-export async function onRequest(context) {
-  const { request, env, next } = context;
+/**
+ * Returns { proceed: true, accessCode: string|null } when the request should
+ * continue to routing, or { proceed: false, response: Response } when the
+ * gate itself must answer the request (activation page or activation redirect).
+ */
+export async function checkGate(request, env) {
   const url = new URL(request.url);
 
-  if (url.pathname === "/robots.txt") return next();
+  if (url.pathname === "/robots.txt") return { proceed: true, accessCode: null };
 
   const valid = (env.ACCESS_CODES || "")
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
 
-  // No codes configured yet: stay open so setup never locks you out of your own site.
-  if (valid.length === 0) return next();
+  // No codes configured yet: stay open, so setup never locks you out of your own site.
+  if (valid.length === 0) return { proceed: true, accessCode: null };
 
   const fromQuery = (url.searchParams.get("k") || "").trim().toUpperCase();
   const fromCookie = (request.headers.get("Cookie") || "")
@@ -37,27 +44,28 @@ export async function onRequest(context) {
     ?.slice(COOKIE.length + 1);
 
   if (fromCookie && valid.includes(fromCookie)) {
-    context.data = context.data || {};
-    context.data.accessCode = fromCookie;
-    return next();
+    return { proceed: true, accessCode: fromCookie };
   }
 
   if (fromQuery) {
     if (valid.includes(fromQuery)) {
       url.searchParams.delete("k");
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: url.pathname + url.search + url.hash,
-          "Set-Cookie": `${COOKIE}=${fromQuery}; Max-Age=${MAX_AGE}; Path=/; HttpOnly; Secure; SameSite=Lax`,
-          "Cache-Control": "no-store",
-        },
-      });
+      return {
+        proceed: false,
+        response: new Response(null, {
+          status: 302,
+          headers: {
+            Location: url.pathname + url.search + url.hash,
+            "Set-Cookie": `${COOKIE}=${fromQuery}; Max-Age=${MAX_AGE}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+            "Cache-Control": "no-store",
+          },
+        }),
+      };
     }
-    return activationPage(true);
+    return { proceed: false, response: activationPage(true) };
   }
 
-  return activationPage(false);
+  return { proceed: false, response: activationPage(false) };
 }
 
 function activationPage(wrongCode) {

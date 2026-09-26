@@ -1,0 +1,22 @@
+name = "cv-tailor"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+# Static site (public/index.html, public/templates/) served directly by the
+# platform for any request that isn't handled by the Worker script below.
+# Because `main` is also set, EVERY request still reaches src/worker.js first
+# -- it's the Worker's own job to call env.ASSETS.fetch() for anything that
+# isn't an API route or the access gate. See src/worker.js.
+[assets]
+directory = "public"
+binding = "ASSETS"
+
+# KV namespace for the per-visitor monthly usage cap (src/lib/usage.js).
+# Create the namespace in the dashboard (Workers & Pages -> KV -> Create),
+# then either paste its id below and redeploy, or bind it manually in the
+# dashboard: this Worker -> Settings -> Bindings -> Add -> KV namespace,
+# variable name exactly "USAGE". Either path works; the dashboard binding is
+# easier if you'd rather not edit this file. See docs/SETUP.md.
+# [[kv_namespaces]]
+# binding = "USAGE"
+# id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"

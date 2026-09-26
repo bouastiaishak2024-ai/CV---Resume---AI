@@ -148,17 +148,22 @@ const GENERATE_SCHEMA = {
   required: ["resume", "coverLetter", "unmatchedKeywords"],
 };
 
-export async function onRequestPost(context) {
-  const { request, env, data } = context;
-
+/**
+ * Called directly by src/worker.js's router (this project is a plain Worker
+ * with static assets, not Cloudflare Pages — see wrangler.toml — so there's
+ * no automatic functions/ directory convention; the Worker dispatches to this
+ * function itself for POST /api/generate, passing the accessCode the gate
+ * already resolved for this request).
+ */
+export async function handleGenerate(request, env, accessCode) {
   // No ACCESS_CODES configured means the gate stays fully open (see
-  // functions/_middleware.js) -- anyone with the URL can reach this endpoint,
-  // and every call still costs a real OpenAI API call. Key the usage cap by
-  // access code when one exists; otherwise fall back to the caller's IP so an
-  // open site still has SOME per-visitor limit rather than none at all. This is
-  // not real protection -- a VPN or shared IP can dodge it -- so turn access
-  // codes on (see docs/SETUP.md) before sharing this link outside a small test.
-  const usageKey = data?.accessCode || request.headers.get("CF-Connecting-IP") || "unknown";
+  // src/lib/gate.js) -- anyone with the URL can reach this endpoint, and every
+  // call still costs a real OpenAI API call. Key the usage cap by access code
+  // when one exists; otherwise fall back to the caller's IP so an open site
+  // still has SOME per-visitor limit rather than none at all. This is not
+  // real protection -- a VPN or shared IP can dodge it -- so turn access codes
+  // on (see docs/SETUP.md) before sharing this link outside a small test.
+  const usageKey = accessCode || request.headers.get("CF-Connecting-IP") || "unknown";
 
   if (env.USAGE) {
     const usage = await checkAndIncrement(env, usageKey);

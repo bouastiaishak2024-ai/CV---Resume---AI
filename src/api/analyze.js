@@ -61,9 +61,13 @@ const ANALYZE_SCHEMA = {
   required: ["jobFound", "roleTitle", "company", "keywords", "gaps"],
 };
 
-export async function onRequestPost(context) {
-  const { request, env } = context;
-
+/**
+ * Called directly by src/worker.js's router (this project is a plain Worker
+ * with static assets, not Cloudflare Pages — see wrangler.toml — so there's
+ * no automatic functions/ directory convention; the Worker dispatches to this
+ * function itself for POST /api/analyze).
+ */
+export async function handleAnalyze(request, env) {
   let body;
   try {
     body = await request.json();

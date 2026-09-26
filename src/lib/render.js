@@ -5,8 +5,14 @@
  * keeps the model's output to content only, matching the JSON-payload-then-
  * render split career-ops itself uses (see cover.md Step 9 / generate-cover-letter.mjs).
  *
- * Templates ship as plain files (not bundled), so they are fetched from the
- * deployed site's own static assets at render time — see loadTemplate().
+ * Templates ship as plain static files under public/templates/ (see
+ * wrangler.toml's [assets] block) rather than being bundled into the Worker
+ * script, so they're readable/editable on their own. loadTemplate() reads
+ * them through the ASSETS binding — the Worker's own static-asset handler,
+ * reachable in-process via env.ASSETS.fetch() — rather than an HTTP round
+ * trip back to the site's own origin, which is both unnecessary here and not
+ * guaranteed to be the fastest or most reliable path for a Worker to fetch
+ * its own static output.
  */
 
 function escapeHtml(s) {
@@ -17,8 +23,8 @@ function escapeHtml(s) {
 }
 
 async function loadTemplate(env, request, name) {
-  const url = new URL(request.url);
-  const res = await fetch(`${url.origin}/templates/${name}`);
+  const url = new URL(`/templates/${name}`, request.url);
+  const res = await env.ASSETS.fetch(new Request(url));
   if (!res.ok) throw new Error(`Template ${name} is missing from the deployed site.`);
   return res.text();
 }

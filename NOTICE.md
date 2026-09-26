@@ -4,14 +4,14 @@ This project adapts two things from **career-ops**
 (https://github.com/career-ops-hq/career-ops), Copyright (c) 2026 Santiago
 Fernández de Valderrama, licensed under the MIT License:
 
-1. **`templates/cover-letter-template.html`** — adapted from career-ops's
+1. **`public/templates/cover-letter-template.html`** — adapted from career-ops's
    `templates/cover-letter-template.html`. The print CSS (page margins,
    ligature disabling for ATS text extraction) is carried over essentially
    unchanged; the config-driven style-token override block and
    Playwright-pipeline-specific comments were removed since they don't apply
    here. See the comment at the top of the file for specifics.
 
-2. **Resume/cover-letter writing rules** in `functions/api/generate.js`'s
+2. **Resume/cover-letter writing rules** in `src/api/generate.js`'s
    system prompt — the no-fabrication rule, the "reformulate never invent"
    keyword-injection strategy with its exact examples, and the cover letter's
    style rules (active voice, no em dashes, banned buzzwords, concrete-metrics

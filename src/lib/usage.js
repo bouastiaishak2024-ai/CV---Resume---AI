@@ -4,11 +4,12 @@
  * Every call to the generate endpoint costs a real OpenAI API call, unlike
  * the rest of a typical static site. Without a cap, one leaked or shared code
  * could run unlimited generations at the owner's expense. This keys usage by
- * the SAME access code the gate already validates (functions/_middleware.js),
- * so there is no separate account system to build.
+ * the SAME access code the gate already validates (src/lib/gate.js), so there
+ * is no separate account system to build.
  *
- * Requires a KV namespace bound as `USAGE` in the Cloudflare Pages project
- * settings (Settings -> Functions -> KV namespace bindings). See docs/SETUP.md.
+ * Requires a KV namespace bound as `USAGE` on this Worker (Settings ->
+ * Bindings -> Add -> KV namespace, or the [[kv_namespaces]] block in
+ * wrangler.toml). See docs/SETUP.md.
  */
 
 const DEFAULT_MONTHLY_LIMIT = 5;
