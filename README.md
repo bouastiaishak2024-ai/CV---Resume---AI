@@ -39,7 +39,7 @@ index.html                     the whole customer-facing flow (vanilla JS)
 functions/_middleware.js       access-code gate (same model as the sister site)
 functions/api/analyze.js       step 1: read the job + CV, surface keywords/gaps
 functions/api/generate.js      step 2: produce the tailored resume + cover letter
-functions/lib/anthropic.js     Anthropic API call helper, no SDK dependency
+functions/lib/openai.js        OpenAI Responses API call helper, no SDK dependency
 functions/lib/docx.js          dependency-free .docx text extractor
 functions/lib/fetchJob.js      job-URL fetch with bot-block detection
 functions/lib/render.js        fills the two HTML templates from Claude's output

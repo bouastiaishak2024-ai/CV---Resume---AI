@@ -1,6 +1,6 @@
 import { fetchJobPage } from "../lib/fetchJob.js";
 import { extractDocxText } from "../lib/docx.js";
-import { buildJobAndCvBlocks, callClaude } from "../lib/anthropic.js";
+import { buildJobAndCvContent, callOpenAI } from "../lib/openai.js";
 import { renderResume, renderCoverLetter } from "../lib/render.js";
 import { checkAndIncrement } from "../lib/usage.js";
 
@@ -36,7 +36,8 @@ trusting this to represent them truthfully to an employer:
    invented justification.
 4. The resume mirrors the candidate's real CV content — same jobs, same real bullets — reordered
    by relevance to this posting and reworded only per rule 2. Do not add sections, employers, or
-   line items that are not in the source CV.
+   line items that are not in the source CV. If a field genuinely has no value for a given entry
+   (e.g. a remote role with no city), use an empty string rather than inventing one.
 
 COVER LETTER STYLE (these make it read like a person, not an AI):
 - Active voice only. Never "was delivered", "has been built", "were led".
@@ -55,6 +56,8 @@ COVER LETTER STYLE (these make it read like a person, not an AI):
 - Use the candidate's "why this role" and "what to emphasize" answers directly to shape the
   opening and the problems-I-will-solve section — this is the candidate's own voice and reasoning,
   not something to override with generic language.
+- If there is no named hiring manager, leave greeting as an empty string (the letter renders
+  without a salutation line rather than a fake "Dear Hiring Manager,").
 
 LANGUAGE: write both documents in the same language as the job posting. If the posting is in
 English, write in English, regardless of what language these instructions are in.
@@ -62,51 +65,83 @@ English, write in English, regardless of what language these instructions are in
 If a JD keyword genuinely cannot be worked in honestly (the candidate has no related experience
 at all), list it in unmatchedKeywords instead of forcing it in.`;
 
+// Strict Structured Outputs schema: every object needs additionalProperties:false, and every
+// property must be listed as required (OpenAI's strict mode has no concept of optional keys).
+// Fields that are legitimately sometimes empty (location, dates, greeting, projects) are plain
+// strings/arrays the model is instructed above to leave empty rather than typed as nullable —
+// simpler for the renderer than threading null-checks through render.js.
 const GENERATE_SCHEMA = {
   type: "object",
+  additionalProperties: false,
   properties: {
     resume: {
       type: "object",
+      additionalProperties: false,
       properties: {
         name: { type: "string" },
         contactLine: { type: "string" },
         summary: { type: "string" },
         skills: {
           type: "array",
-          items: { type: "object", properties: { category: { type: "string" }, items: { type: "array", items: { type: "string" } } }, required: ["category", "items"] },
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: { category: { type: "string" }, items: { type: "array", items: { type: "string" } } },
+            required: ["category", "items"],
+          },
         },
         experience: {
           type: "array",
           items: {
             type: "object",
+            additionalProperties: false,
             properties: {
               title: { type: "string" }, company: { type: "string" }, location: { type: "string" },
               dates: { type: "string" }, bullets: { type: "array", items: { type: "string" } },
             },
-            required: ["title", "company", "dates", "bullets"],
+            required: ["title", "company", "location", "dates", "bullets"],
           },
         },
         education: {
           type: "array",
-          items: { type: "object", properties: { degree: { type: "string" }, institution: { type: "string" }, dates: { type: "string" } }, required: ["degree", "institution"] },
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: { degree: { type: "string" }, institution: { type: "string" }, dates: { type: "string" } },
+            required: ["degree", "institution", "dates"],
+          },
         },
         projects: {
           type: "array",
-          items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" } }, required: ["name", "description"] },
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: { name: { type: "string" }, description: { type: "string" } },
+            required: ["name", "description"],
+          },
         },
       },
       required: ["name", "contactLine", "summary", "skills", "experience", "education", "projects"],
     },
     coverLetter: {
       type: "object",
+      additionalProperties: false,
       properties: {
         name: { type: "string" }, contactLine: { type: "string" }, roleTitle: { type: "string" },
         company: { type: "string" }, greeting: { type: "string" }, opening: { type: "string" },
         profileIntro: { type: "string" },
-        achievements: { type: "array", items: { type: "object", properties: { lead: { type: "string" }, impact: { type: "string" } }, required: ["lead", "impact"] } },
+        achievements: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: { lead: { type: "string" }, impact: { type: "string" } },
+            required: ["lead", "impact"],
+          },
+        },
         problemsSection: { type: "string" }, closing: { type: "string" },
       },
-      required: ["name", "contactLine", "roleTitle", "company", "opening", "profileIntro", "achievements", "problemsSection", "closing"],
+      required: ["name", "contactLine", "roleTitle", "company", "greeting", "opening", "profileIntro", "achievements", "problemsSection", "closing"],
     },
     unmatchedKeywords: { type: "array", items: { type: "string" } },
   },
@@ -118,7 +153,7 @@ export async function onRequestPost(context) {
 
   // No ACCESS_CODES configured means the gate stays fully open (see
   // functions/_middleware.js) -- anyone with the URL can reach this endpoint,
-  // and every call still costs a real Anthropic API call. Key the usage cap by
+  // and every call still costs a real OpenAI API call. Key the usage cap by
   // access code when one exists; otherwise fall back to the caller's IP so an
   // open site still has SOME per-visitor limit rather than none at all. This is
   // not real protection -- a VPN or shared IP can dodge it -- so turn access
@@ -174,9 +209,9 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: "Provide either a job URL or job screenshots." }, 400);
   }
 
-  const blocks = buildJobAndCvBlocks(cvBlock, jobBlock);
-  blocks.push({
-    type: "text",
+  const content = buildJobAndCvContent(cvBlock, jobBlock);
+  content.push({
+    type: "input_text",
     text: `CANDIDATE'S OWN ANSWERS (use these to personalize — do not override with generic language):
 Why this role: ${answers.whyThisRole}
 What to emphasize: ${answers.emphasize || "(not specified)"}
@@ -186,17 +221,17 @@ Today's date: ${new Date().toISOString().slice(0, 10)}`,
 
   let result;
   try {
-    result = await callClaude(env, { system: GENERATE_SYSTEM, blocks, schema: GENERATE_SCHEMA, maxTokens: 6000 });
+    result = await callOpenAI(env, { system: GENERATE_SYSTEM, content, schema: GENERATE_SCHEMA, maxOutputTokens: 6000 });
   } catch (err) {
     return json({ ok: false, error: err.message }, 502);
   }
 
-  if (!result.coverLetter.date) result.coverLetter.date = new Date().toISOString().slice(0, 10);
+  const coverLetterDate = new Date().toISOString().slice(0, 10);
 
   try {
     const [resumeHtml, coverLetterHtml] = await Promise.all([
       renderResume(env, request, result.resume),
-      renderCoverLetter(env, request, { ...result.coverLetter, date: result.coverLetter.date }),
+      renderCoverLetter(env, request, { ...result.coverLetter, date: coverLetterDate }),
     ]);
     return json({ ok: true, resumeHtml, coverLetterHtml, unmatchedKeywords: result.unmatchedKeywords });
   } catch (err) {

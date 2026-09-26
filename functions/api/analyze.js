@@ -1,6 +1,6 @@
 import { fetchJobPage } from "../lib/fetchJob.js";
 import { extractDocxText } from "../lib/docx.js";
-import { buildJobAndCvBlocks, callClaude } from "../lib/anthropic.js";
+import { buildJobAndCvContent, callOpenAI } from "../lib/openai.js";
 
 /**
  * Step 1 of the flow: given a job (URL or screenshots) and a CV, return a quick
@@ -26,7 +26,7 @@ before drafting a tailored resume and cover letter for it.
 RULES (violating any of these makes your output unusable — follow them exactly):
 - Never invent a company name, role title, or requirement that is not actually present in the
   job input. If the input does not contain a real, identifiable job posting, set jobFound to
-  false and leave the other fields empty rather than guessing.
+  false and leave the other fields as empty strings/arrays rather than guessing.
 - Keywords must be exact phrases lifted from the posting, not your own paraphrase of it.
 - A "gap" is something the posting asks for that the CV does not clearly show — never invent a
   gap that does not exist, and never assume the candidate lacks something the CV is simply silent
@@ -36,24 +36,24 @@ RULES (violating any of these makes your output unusable — follow them exactly
   handle that specific gap (e.g. address it directly, don't mention it, or explain their own
   angle) — not a statement, not advice, not something you answer yourself.
 - List at most 3 gaps. Most CVs against most postings have 0-2 real gaps; do not manufacture a
-  third to fill a quota.`;
+  third to fill a quota. Return fewer items in the gaps array rather than padding it.`;
 
+// Strict Structured Outputs schema: every object needs additionalProperties:false,
+// and every property must be listed as required (no true optionals) — see openai.js.
 const ANALYZE_SCHEMA = {
   type: "object",
+  additionalProperties: false,
   properties: {
     jobFound: { type: "boolean" },
     roleTitle: { type: "string" },
     company: { type: "string" },
-    keywords: { type: "array", items: { type: "string" }, maxItems: 10 },
+    keywords: { type: "array", items: { type: "string" } },
     gaps: {
       type: "array",
-      maxItems: 3,
       items: {
         type: "object",
-        properties: {
-          issue: { type: "string" },
-          question: { type: "string" },
-        },
+        additionalProperties: false,
+        properties: { issue: { type: "string" }, question: { type: "string" } },
         required: ["issue", "question"],
       },
     },
@@ -101,11 +101,11 @@ export async function onRequestPost(context) {
   }
 
   try {
-    const result = await callClaude(env, {
+    const result = await callOpenAI(env, {
       system: ANALYZE_SYSTEM,
-      blocks: buildJobAndCvBlocks(cvBlock, jobBlock),
+      content: buildJobAndCvContent(cvBlock, jobBlock),
       schema: ANALYZE_SCHEMA,
-      maxTokens: 1500,
+      maxOutputTokens: 1500,
     });
     return json({ ok: true, ...result });
   } catch (err) {

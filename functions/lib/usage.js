@@ -1,7 +1,7 @@
 /**
  * Per-code monthly usage cap, backed by Cloudflare KV.
  *
- * Every call to the generate endpoint costs a real Anthropic API call, unlike
+ * Every call to the generate endpoint costs a real OpenAI API call, unlike
  * the rest of a typical static site. Without a cap, one leaked or shared code
  * could run unlimited generations at the owner's expense. This keys usage by
  * the SAME access code the gate already validates (functions/_middleware.js),

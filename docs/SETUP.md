@@ -5,9 +5,10 @@ site plus Cloudflare Pages Functions, no separate server, no build step.
 
 ## What's different from a plain static site
 
-Every use of the resume/cover-letter generator calls the Anthropic API, which
-costs real money per call — unlike the rest of the page, which is free to serve
-once deployed. Two things exist specifically to control that:
+Every use of the resume/cover-letter generator calls the OpenAI API (Responses
+API, model `gpt-4.1`), which costs real money per call — unlike the rest of the
+page, which is free to serve once deployed. Two things exist specifically to
+control that:
 
 - **`ACCESS_CODES`** — same one-code-per-customer gate as before, so only
   paying customers can reach the feature at all.
@@ -29,10 +30,11 @@ once deployed. Two things exist specifically to control that:
 
 ## Required configuration (won't work without these)
 
-### 1. Anthropic API key
+### 1. OpenAI API key
 
-Settings → Environment variables → add **`ANTHROPIC_API_KEY`** (Production),
-your own key from console.anthropic.com. Mark it as a **secret**, not a plain
+Settings → Environment variables → add **`OPENAI_API_KEY`** (Production),
+your own key from platform.openai.com (now developers.openai.com — OpenAI
+moved its docs/dashboard domain). Mark it as a **secret**, not a plain
 variable — it must never be readable from the dashboard UI after saving.
 
 ### 2. Access codes
