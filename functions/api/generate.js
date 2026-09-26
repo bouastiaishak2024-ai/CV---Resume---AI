@@ -115,14 +115,18 @@ const GENERATE_SCHEMA = {
 
 export async function onRequestPost(context) {
   const { request, env, data } = context;
-  const accessCode = data?.accessCode;
 
-  if (!accessCode) {
-    return json({ ok: false, error: "Not authenticated." }, 401);
-  }
+  // No ACCESS_CODES configured means the gate stays fully open (see
+  // functions/_middleware.js) -- anyone with the URL can reach this endpoint,
+  // and every call still costs a real Anthropic API call. Key the usage cap by
+  // access code when one exists; otherwise fall back to the caller's IP so an
+  // open site still has SOME per-visitor limit rather than none at all. This is
+  // not real protection -- a VPN or shared IP can dodge it -- so turn access
+  // codes on (see docs/SETUP.md) before sharing this link outside a small test.
+  const usageKey = data?.accessCode || request.headers.get("CF-Connecting-IP") || "unknown";
 
   if (env.USAGE) {
-    const usage = await checkAndIncrement(env, accessCode);
+    const usage = await checkAndIncrement(env, usageKey);
     if (!usage.allowed) {
       return json(
         { ok: false, error: "monthly_limit_reached", limit: usage.limit, used: usage.used },
