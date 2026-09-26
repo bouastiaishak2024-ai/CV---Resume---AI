@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Resume — {{NAME}}</title>
+<style>
+  :root { --accent-color: #1A56A0; --font-family: "Helvetica", Arial, sans-serif; --page-margin: 0.55in; }
+  @page { margin: var(--page-margin); }
+  * { margin: 0; padding: 0; box-sizing: border-box;
+      font-variant-ligatures: none; font-feature-settings: "liga" 0, "clig" 0, "dlig" 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: var(--font-family); font-size: 10pt; line-height: 1.4; color: #1a1a1a; background: #fff; }
+  .name { font-weight: 700; font-size: 18pt; color: var(--accent-color); margin-bottom: 3pt; }
+  .contact { font-size: 9pt; color: #555; margin-bottom: 10pt; }
+  .contact a { color: var(--accent-color); text-decoration: none; }
+  h2 { font-size: 11pt; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.03em;
+       border-bottom: 1pt solid #ccc; padding-bottom: 2pt; margin-top: 12pt; margin-bottom: 6pt; }
+  .summary { margin-bottom: 4pt; }
+  .skills-row { margin-bottom: 4pt; }
+  .skills-row .cat { font-weight: 700; }
+  .job { margin-bottom: 9pt; }
+  .job-head { display: flex; justify-content: space-between; font-weight: 700; font-size: 10.5pt; }
+  .job-sub { font-size: 9.5pt; color: #555; font-style: italic; margin-bottom: 3pt; }
+  ul.bullets { list-style: none; }
+  ul.bullets li { margin-bottom: 3pt; padding-left: 12pt; text-indent: -12pt; }
+  ul.bullets li::before { content: "\2022"; display: inline-block; width: 12pt; text-indent: 0; }
+  .edu-row { display: flex; justify-content: space-between; margin-bottom: 3pt; }
+  .proj { margin-bottom: 6pt; }
+  .proj-name { font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="name">{{NAME}}</div>
+  <div class="contact">{{CONTACT_LINE}}</div>
+
+  <h2>Professional Summary</h2>
+  <p class="summary">{{SUMMARY}}</p>
+
+  <h2>Skills</h2>
+  {{SKILLS_BLOCK}}
+
+  <h2>Professional Experience</h2>
+  {{EXPERIENCE_BLOCK}}
+
+  {{PROJECTS_SECTION}}
+
+  <h2>Education</h2>
+  {{EDUCATION_BLOCK}}
+</body>
+</html>

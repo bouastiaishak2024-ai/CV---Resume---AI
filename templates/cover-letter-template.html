@@ -1,0 +1,55 @@
+<!--
+  Adapted from career-ops (https://github.com/career-ops-hq/career-ops),
+  Copyright (c) 2026 Santiago Fernández de Valderrama, MIT License.
+  Original: templates/cover-letter-template.html
+  Changes here: removed the config-driven style-token override block and the
+  PDF-pipeline-specific comments that didn't apply outside career-ops's own
+  Playwright renderer; the print CSS itself (@page, ligature disabling for ATS
+  text extraction) is unchanged because it is exactly what this project needs
+  too, for exactly the same reasons.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cover Letter — {{NAME}}</title>
+<style>
+  :root { --accent-color: #1A56A0; --font-family: "Helvetica", Arial, sans-serif; --font-size: 10pt; --page-margin: 0.6in; }
+  @page { margin: var(--page-margin); }
+  * { margin: 0; padding: 0; box-sizing: border-box;
+      font-variant-ligatures: none; font-feature-settings: "liga" 0, "clig" 0, "dlig" 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: var(--font-family); font-size: var(--font-size); line-height: 1.4; color: #1a1a1a; background: #fff; }
+  .name { font-weight: 700; font-size: 14pt; margin-bottom: 3pt; }
+  .contact { font-size: 9pt; color: #666; margin-bottom: 2pt; }
+  .contact a { color: var(--accent-color); text-decoration: none; }
+  .divider { border: none; border-top: 0.5pt solid #ccc; margin: 6pt 0 8pt; }
+  .role-title { font-weight: 700; font-size: 11pt; margin-top: 10pt; margin-bottom: 2pt; }
+  .dateline { font-size: 9pt; color: #666; margin-bottom: 12pt; }
+  .greeting { margin-bottom: 8pt; }
+  p { margin-bottom: 8pt; }
+  .achievements { list-style: none; margin-bottom: 4pt; }
+  .achievements li { margin-bottom: 5pt; padding-left: 14pt; text-indent: -14pt; }
+  .achievements li::before { content: "\2022"; display: inline-block; width: 14pt; text-indent: 0; }
+  .signature { margin-top: 12pt; }
+</style>
+</head>
+<body>
+  <div class="name">{{NAME}}</div>
+  <div class="contact">{{CONTACT_LINE}}</div>
+  <hr class="divider">
+
+  <div class="role-title">Cover Letter: {{ROLE_TITLE}}</div>
+  <div class="dateline">{{COMPANY}}, {{DATE}}</div>
+
+  {{GREETING_BLOCK}}
+  <p>{{OPENING}}</p>
+  <p>{{PROFILE_INTRO}}</p>
+
+  <ul class="achievements">{{ACHIEVEMENTS_BLOCK}}</ul>
+
+  <p>{{PROBLEMS_SECTION}}</p>
+  <p>{{CLOSING}}</p>
+  <div class="signature">{{NAME}}</div>
+</body>
+</html>

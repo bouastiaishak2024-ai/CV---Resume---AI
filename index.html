@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مساعد التقديم للوظائف</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@600&display=swap">
+<style>
+:root{--navy:#1B2A4A;--ink:#0E1729;--gold:#C9A227;--paper:#F2F5FA;--surface:#fff;
+ --slate:#5A6780;--rule:#C9D3E2;--stop:#93332C;--stop-bg:#F8E4E1;--ok:#1B6E3C;--ok-bg:#E3F3E9}
+@media(prefers-color-scheme:dark){:root{--navy:#8FA6CE;--ink:#E8EDF6;--gold:#D8B64A;
+ --paper:#0C1220;--surface:#141C2E;--slate:#98A5BD;--rule:#2C3950;--stop:#E8968C;--stop-bg:#3A1A18;
+ --ok:#8FD6A8;--ok-bg:#123420}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink);
+ font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-size:15px;line-height:1.7}
+header{padding:22px 20px;text-align:center;border-bottom:1px solid var(--rule)}
+header h1{margin:0;font-family:"Reem Kufi",sans-serif;font-size:22px;color:var(--navy)}
+header p{margin:6px 0 0;color:var(--slate);font-size:13.5px}
+main{max-width:640px;margin:0 auto;padding:26px 20px 60px}
+.card{background:var(--surface);border:1px solid var(--rule);padding:26px;margin-bottom:18px}
+.card h2{margin:0 0 14px;font-size:17px;color:var(--navy)}
+label{display:block;font-size:13.5px;color:var(--slate);margin:14px 0 6px;font-weight:500}
+label:first-of-type{margin-top:0}
+input[type=text],input[type=url],textarea{width:100%;font:inherit;font-size:14.5px;
+ padding:11px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--paper);color:var(--ink)}
+textarea{resize:vertical;min-height:64px}
+input[type=file]{width:100%;font:inherit;font-size:13.5px;padding:9px 0}
+.hint{font-size:12.5px;color:var(--slate);margin-top:4px}
+button{font:inherit;font-weight:600;font-size:14.5px;border:0;border-radius:2px;padding:12px 18px;cursor:pointer}
+.btn-primary{background:var(--navy);color:#fff;width:100%;margin-top:18px}
+.btn-primary:hover{opacity:.92}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{background:transparent;color:var(--navy);border:1px solid var(--navy);width:100%;margin-top:8px}
+.err{background:var(--stop-bg);color:var(--stop);border:1px solid var(--stop);padding:10px 12px;font-size:13.5px;margin-bottom:14px}
+.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok);padding:10px 12px;font-size:13.5px;margin-bottom:14px}
+.pill{display:inline-block;background:var(--paper);border:1px solid var(--rule);border-radius:20px;
+ padding:4px 12px;font-size:12.5px;margin:2px}
+.gap{border-top:1px solid var(--rule);padding-top:12px;margin-top:12px}
+.gap-issue{font-weight:600;font-size:13.5px;margin-bottom:6px}
+.result-frame{width:100%;height:520px;border:1px solid var(--rule);background:#fff}
+.result-actions{display:flex;gap:10px;margin-top:10px}
+.result-actions button{flex:1;margin-top:0}
+.loading{text-align:center;color:var(--slate);padding:30px 0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+ <h1>مساعد التقديم للوظائف</h1>
+ <p>ارفع سيرتك الذاتية، الصق رابط الوظيفة، واحصل على سيرة ذاتية ورسالة تعريفية مُخصّصتين لهذه الوظيفة تحديدًا</p>
+</header>
+<main>
+
+ <section id="step-upload" class="card">
+  <h2>الخطوة ١: السيرة الذاتية والوظيفة</h2>
+  <div id="upload-err" class="err" hidden></div>
+
+  <label for="cv-file">السيرة الذاتية (PDF أو Word)</label>
+  <input type="file" id="cv-file" accept=".pdf,.docx">
+
+  <label for="job-url">رابط إعلان الوظيفة</label>
+  <input type="url" id="job-url" placeholder="https://...">
+  <p class="hint">إن تعذّر فتح الرابط تلقائيًا (بعض المواقع مثل LinkedIn تمنع ذلك)، سنطلب منك صور شاشة للإعلان بدلًا منه.</p>
+
+  <div id="screenshots-block" hidden>
+   <label for="job-images">صور شاشة لإعلان الوظيفة (يمكن اختيار أكثر من صورة)</label>
+   <input type="file" id="job-images" accept="image/*" multiple>
+  </div>
+
+  <button class="btn-primary" id="btn-analyze">التالي: تحليل الوظيفة</button>
+ </section>
+
+ <section id="step-loading-analyze" class="card loading" hidden>جارٍ تحليل الوظيفة…</section>
+
+ <section id="step-personalize" class="card" hidden>
+  <h2>الخطوة ٢: خصّص طلبك</h2>
+  <div>
+   <span class="hint">الوظيفة: </span><strong id="p-role"></strong> — <span id="p-company"></span>
+  </div>
+  <div id="p-keywords" style="margin-top:8px"></div>
+
+  <label for="p-why">لماذا تريد هذه الوظيفة تحديدًا؟</label>
+  <textarea id="p-why" placeholder="اكتب بإيجاز — سيُستخدم هذا في فقرة الافتتاح من رسالة التعريف"></textarea>
+
+  <label for="p-emphasize">هل تريد التركيز على شيء معيّن؟ (اختياري)</label>
+  <textarea id="p-emphasize" placeholder="مثال: خبرتي في القيادة، أو مشروع معيّن"></textarea>
+
+  <div id="p-gaps"></div>
+
+  <div id="personalize-err" class="err" hidden></div>
+  <button class="btn-primary" id="btn-generate">إنشاء السيرة الذاتية ورسالة التعريف</button>
+ </section>
+
+ <section id="step-loading-generate" class="card loading" hidden>جارٍ إنشاء المستندات… قد يستغرق هذا دقيقة</section>
+
+ <section id="step-results" class="card" hidden>
+  <h2>النتيجة</h2>
+  <div id="results-err" class="err" hidden></div>
+  <div id="results-unmatched" class="ok" hidden></div>
+
+  <label>السيرة الذاتية</label>
+  <iframe id="resume-frame" class="result-frame"></iframe>
+  <div class="result-actions">
+   <button class="btn-secondary" id="btn-print-resume">طباعة / حفظ كـ PDF</button>
+  </div>
+
+  <label style="margin-top:20px">رسالة التعريف</label>
+  <iframe id="cover-frame" class="result-frame"></iframe>
+  <div class="result-actions">
+   <button class="btn-secondary" id="btn-print-cover">طباعة / حفظ كـ PDF</button>
+  </div>
+
+  <button class="btn-secondary" id="btn-restart" style="margin-top:20px">طلب جديد</button>
+ </section>
+
+</main>
+<script>
+const state = { cv: null, jobUrl: "", jobImages: [], analysis: null, needsScreenshots: false };
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(",")[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function show(id) { document.getElementById(id).hidden = false; }
+function hide(id) { document.getElementById(id).hidden = true; }
+function setErr(id, msg) { const el = document.getElementById(id); if (!msg) { el.hidden = true; return; } el.textContent = msg; el.hidden = false; }
+
+async function readCv() {
+  const fileInput = document.getElementById("cv-file");
+  if (!fileInput.files.length) return null;
+  const file = fileInput.files[0];
+  const kind = file.name.toLowerCase().endsWith(".docx") ? "docx" : "pdf";
+  const base64 = await fileToBase64(file);
+  return { kind, base64 };
+}
+
+document.getElementById("btn-analyze").addEventListener("click", async () => {
+  setErr("upload-err", "");
+  const cv = await readCv();
+  if (!cv) return setErr("upload-err", "الرجاء رفع السيرة الذاتية (PDF أو Word).");
+  const jobUrl = document.getElementById("job-url").value.trim();
+  const imgInput = document.getElementById("job-images");
+  const jobImages = [];
+  if (!state.needsScreenshots === false && imgInput.files.length) {
+    for (const f of imgInput.files) jobImages.push(await fileToBase64(f));
+  }
+  if (!jobUrl && jobImages.length === 0) return setErr("upload-err", "الرجاء إدخال رابط الوظيفة أو رفع صور شاشة.");
+
+  state.cv = cv; state.jobUrl = jobUrl; state.jobImages = jobImages;
+
+  hide("step-upload"); show("step-loading-analyze");
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobUrl: jobImages.length ? undefined : jobUrl, jobImages: jobImages.length ? jobImages : undefined, cv }),
+    });
+    const data = await res.json();
+    hide("step-loading-analyze");
+
+    if (data.needsScreenshots) {
+      state.needsScreenshots = true;
+      show("step-upload");
+      document.getElementById("screenshots-block").hidden = false;
+      setErr("upload-err", "تعذّر فتح هذا الرابط تلقائيًا. الرجاء رفع صور شاشة لإعلان الوظيفة أعلاه، ثم اضغط التالي مرة أخرى.");
+      return;
+    }
+    if (!data.ok) { show("step-upload"); return setErr("upload-err", "حدث خطأ: " + (data.error || "غير معروف")); }
+    if (!data.jobFound) { show("step-upload"); return setErr("upload-err", "لم نتمكن من التعرف على إعلان وظيفة حقيقي في ما أرسلته. تأكد من الرابط أو الصور."); }
+
+    state.analysis = data;
+    renderPersonalize(data);
+    show("step-personalize");
+  } catch (e) {
+    hide("step-loading-analyze"); show("step-upload");
+    setErr("upload-err", "تعذّر الاتصال بالخادم: " + e.message);
+  }
+});
+
+function renderPersonalize(data) {
+  document.getElementById("p-role").textContent = data.roleTitle || "—";
+  document.getElementById("p-company").textContent = data.company || "—";
+  document.getElementById("p-keywords").innerHTML = (data.keywords || []).map((k) => `<span class="pill">${escapeHtml(k)}</span>`).join(" ");
+
+  const gapsEl = document.getElementById("p-gaps");
+  gapsEl.innerHTML = "";
+  (data.gaps || []).forEach((g, i) => {
+    const div = document.createElement("div");
+    div.className = "gap";
+    div.innerHTML = `<div class="gap-issue">${escapeHtml(g.issue)}</div>
+      <label style="margin-top:0">${escapeHtml(g.question)}</label>
+      <textarea data-gap-index="${i}" data-issue="${escapeHtml(g.issue)}"></textarea>`;
+    gapsEl.appendChild(div);
+  });
+}
+
+function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+document.getElementById("btn-generate").addEventListener("click", async () => {
+  setErr("personalize-err", "");
+  const whyThisRole = document.getElementById("p-why").value.trim();
+  if (!whyThisRole) return setErr("personalize-err", "الرجاء الإجابة عن سؤال: لماذا تريد هذه الوظيفة؟");
+  const emphasize = document.getElementById("p-emphasize").value.trim();
+  const gapAnswers = [...document.querySelectorAll("#p-gaps textarea")].map((t) => ({ issue: t.dataset.issue, answer: t.value.trim() }));
+
+  hide("step-personalize"); show("step-loading-generate");
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jobUrl: state.jobImages.length ? undefined : state.jobUrl,
+        jobImages: state.jobImages.length ? state.jobImages : undefined,
+        cv: state.cv,
+        answers: { whyThisRole, emphasize, gapAnswers },
+      }),
+    });
+    const data = await res.json();
+    hide("step-loading-generate");
+
+    if (!data.ok) {
+      show("step-personalize");
+      if (data.error === "monthly_limit_reached") return setErr("personalize-err", `وصلت إلى الحد الشهري (${data.limit} طلبات). حاول مرة أخرى الشهر القادم.`);
+      return setErr("personalize-err", "حدث خطأ: " + (data.error || "غير معروف"));
+    }
+
+    document.getElementById("resume-frame").srcdoc = data.resumeHtml;
+    document.getElementById("cover-frame").srcdoc = data.coverLetterHtml;
+    if (data.unmatchedKeywords && data.unmatchedKeywords.length) {
+      setErr("results-unmatched", null);
+      const el = document.getElementById("results-unmatched");
+      el.hidden = false;
+      el.textContent = "كلمات من الإعلان لم تُدرج لعدم توفر خبرة حقيقية بها: " + data.unmatchedKeywords.join("، ");
+    } else {
+      document.getElementById("results-unmatched").hidden = true;
+    }
+    show("step-results");
+  } catch (e) {
+    hide("step-loading-generate"); show("step-personalize");
+    setErr("personalize-err", "تعذّر الاتصال بالخادم: " + e.message);
+  }
+});
+
+document.getElementById("btn-print-resume").addEventListener("click", () => document.getElementById("resume-frame").contentWindow.print());
+document.getElementById("btn-print-cover").addEventListener("click", () => document.getElementById("cover-frame").contentWindow.print());
+document.getElementById("btn-restart").addEventListener("click", () => location.reload());
+</script>
+</body>
+</html>
